@@ -1,0 +1,66 @@
+with_viz3d: false
+generate_directory_prefix: false
+progress_bar: false
+debug_information: false
+output_results: true
+exit_early: true
+output_dir: /media/sirobo/HDD/slam3d-livox-mid360s/results/stage2/ct_icp_synthetic
+dataset_options:
+- dataset: KITTI_CARLA
+  root_path: /media/sirobo/HDD/slam3d-livox-mid360s/datasets/stage2/ct_synthetic
+  use_all_datasets: false
+  fail_if_incomplete: false
+  min_dist_lidar_center: 0.5
+  max_dist_lidar_center: 70.0
+  sequence_options:
+  - sequence_name: Town01
+    start_frame_id: 0
+    max_num_frames: 100
+odometry_options:
+  debug_print: false
+  motion_compensation: CONTINUOUS
+  initialization: INIT_CONSTANT_VELOCITY
+  sample_voxel_size: 0.5
+  voxel_size: 0.5
+  max_distance: 70.0
+  distance_error_threshold: 3.0
+  neighborhood_strategy:
+    type: NEAREST_NEIGHBOR_STRATEGY
+    max_num_neighbors: 20
+    min_num_neighbors: 10
+  map_options:
+    map_type: MULTI_RESOLUTION_VOXEL_HASHMAP
+    default_radius: 0.75
+    resolutions:
+    - resolution: 0.8
+      max_num_points: 30
+      min_distance_between_points: 0.1
+  ct_icp_options:
+    debug_print: false
+    output_weights: false
+    num_iters_icp: 5
+    parametrization: CONTINUOUS_TIME
+    distance: POINT_TO_PLANE
+    solver: CERES
+    max_num_residuals: 900
+    min_num_residuals: 100
+    weighting_scheme: ALL
+    weight_alpha: 0.9
+    weight_neighborhood: 0.1
+    min_number_neighbors: 20
+    max_number_neighbors: 20
+    num_closest_neighbors: 1
+    power_planarity: 2
+    threshold_voxel_occupancy: 1
+    threshold_orientation_norm: 0.1
+    threshold_translation_norm: 0.01
+    point_to_plane_with_distortion: true
+    beta_location_consistency: 0.001
+    beta_constant_velocity: 0.001
+    beta_small_velocity: 0.0
+    beta_orientation_consistency: 0.0
+    loss_function: CAUCHY
+    ls_max_num_iters: 5
+    ls_num_threads: 8
+    ls_sigma: 0.1
+    ls_tolerant_min_threshold: 0.05

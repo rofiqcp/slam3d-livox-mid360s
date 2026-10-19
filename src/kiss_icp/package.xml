@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>kiss_icp</name>
+  <version>1.3.0</version>
+  <description>Offline-vendored ROS 2 KISS-ICP baseline for Livox MID-360S.</description>
+  <maintainer email="sirobo@example.com">sirobo</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>rcutils</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>std_srvs</depend>
+  <depend>eigen</depend>
+  <depend>sophus</depend>
+  <depend>tbb</depend>
+  <exec_depend>ros2launch</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

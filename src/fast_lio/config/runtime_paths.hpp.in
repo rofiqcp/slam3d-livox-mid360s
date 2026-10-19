@@ -1,0 +1,2 @@
+#pragma once
+#define ROOT_DIR "@CMAKE_CURRENT_BINARY_DIR@/"

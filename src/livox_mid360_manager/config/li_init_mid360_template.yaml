@@ -1,0 +1,38 @@
+# ROS2-side calibration preparation template derived from the Mid360 settings
+# in Referensi-slam3d/10_CALIBRATION_INITIALIZATION/LiDAR_IMU_Init.
+# LiDAR_IMU_Init itself is ROS1; use this file as a parameter bridge/reference.
+common:
+  lid_topic: /livox/lidar
+  imu_topic: /livox/imu
+
+preprocess:
+  lidar_type: 1
+  feature_extract_en: false
+  scan_line: 6
+  blind: 1.0
+
+initialization:
+  cut_frame_num: 5
+  orig_odom_freq: 10
+  # For Livox built-in IMU, reference implementation recommends ~1.
+  # Replace with imu_stationary.yaml -> imu_stationary.accel_norm_mean_g.
+  mean_acc_norm: 1.0
+  online_refine_time: 20
+  data_accum_length: 500
+  Rot_LI_cov: [0.00005, 0.00005, 0.00005]
+  Trans_LI_cov: [0.00001, 0.00001, 0.00001]
+
+mapping:
+  filter_size_surf: 0.05
+  filter_size_map: 0.15
+  gyr_cov: 2.0
+  acc_cov: 2.0
+  b_acc_cov: 0.0001
+  b_gyr_cov: 0.0001
+  det_range: 100.0
+
+notes:
+  acceleration_unit_from_livox_ros_driver2: g
+  angular_velocity_unit_from_livox_ros_driver2: rad/s
+  required_initial_stationary_seconds: 5
+  recommended_recording: simultaneous_lidar_imu_rosbag

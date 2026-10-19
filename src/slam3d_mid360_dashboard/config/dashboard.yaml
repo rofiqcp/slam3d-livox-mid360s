@@ -1,0 +1,26 @@
+cloud_filter:
+  ros__parameters:
+    input_topic: /livox/lidar
+    output_topic: /mid360/points_filtered
+    min_range_m: 0.25
+    max_range_m: 65.0
+    voxel_m: 0.15
+    max_points: 150000
+map_preview:
+  ros__parameters:
+    input_topic: /p4/optimized_map
+    output_topic: /mid360/map_preview
+    save_service: /mid360/save_preview
+    voxel_m: 0.25
+    max_points: 90000
+    output_dir: ""
+web_dashboard:
+  ros__parameters:
+    bind_address: 127.0.0.1
+    port: 5001
+    preview_topic: /mid360/map_preview
+    cloud_topic: /livox/lidar
+    imu_topic: /livox/imu
+    odom_topic: /p4/optimized_odometry
+    max_web_points: 3500
+    stale_after_s: 3.0

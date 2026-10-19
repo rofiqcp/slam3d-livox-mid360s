@@ -1,0 +1,16 @@
+# Initial extrinsic baseline. Replace only after a validated calibration.
+# Transform convention: parent_frame -> child_frame.
+extrinsics:
+  parent_frame: base_link
+  child_frame: livox_frame
+  translation_m:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  rotation_rpy_rad:
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  time_offset_s: 0.0
+  status: uncalibrated
+  source: initial_zero_baseline

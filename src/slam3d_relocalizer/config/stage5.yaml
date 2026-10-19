@@ -1,0 +1,32 @@
+relocalizer_node:
+  ros__parameters:
+    map_pcd: ""
+    poses_csv: ""
+    odom_topic: /lio/odometry
+    cloud_topic: /lio/cloud_registered
+    map_frame: map
+    odom_frame: lio_odom
+    sensor_frame: livox_frame
+    use_tf: true
+    auto_global_on_start: true
+    auto_recovery: true
+    min_scan_points: 100
+    sync_tolerance_s: 0.035
+    map_voxel_m: 0.55
+    scan_voxel_m: 0.60
+    coarse_voxel_m: 0.85
+    local_map_radius_m: 16.0
+    icp_coarse_correspondence_m: 2.5
+    icp_fine_correspondence_m: 1.2
+    icp_coarse_iterations: 18
+    icp_fine_iterations: 18
+    max_candidates: 16
+    icp_update_stride: 4
+    min_overlap: 0.52
+    max_fitness: 0.30
+    max_tracking_correction_m: 1.5
+    max_tracking_correction_deg: 30.0
+    tracking_failure_limit: 3
+    recovery_cooldown_s: 3.0
+    max_path_poses: 10000
+    pose_output_dir: ""

@@ -1,0 +1,13 @@
+stage2_odom_evaluator:
+  ros__parameters:
+    backend: kiss_icp
+    odom_topic: /kiss/odometry
+    path_topic: /stage2/kiss_path
+    ground_truth_topic: ""
+    expected_hz: 10.0
+    startup_grace: 5.0
+    stale_timeout: 2.0
+    translation_jump_m: 1.0
+    rotation_jump_rad: 0.5
+    z_span_warn_m: 0.5
+    max_path_poses: 20000

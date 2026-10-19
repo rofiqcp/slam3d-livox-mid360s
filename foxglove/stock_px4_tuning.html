@@ -1,0 +1,106 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MID-360S • PX4 Stock Safety Tuning</title>
+<style>
+:root{color-scheme:dark;--bg:#09121f;--panel:#152338;--edge:#29415a;--muted:#9bb2c8;--text:#e8f3ff;--teal:#4dd9c9;--red:#ff818b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,sans-serif}
+header{padding:23px 3vw;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:24px;margin:0}h2{font-size:16px;margin:0 0 14px}p{color:var(--muted);margin:5px 0}
+main{max-width:1550px;margin:auto;padding:24px 3vw;display:grid;grid-template-columns:1.25fr 1fr;gap:18px}
+section{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.field input,.field select{background:#0d1b2c;color:var(--text);border:1px solid #405775;padding:10px;border-radius:7px;width:100%;font-size:15px}
+.field input:focus-visible,.field select:focus-visible,button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.stat{padding:11px;border-radius:9px;background:#0b192a;border:1px solid #293f55}
+.stat .v{font-size:19px;font-weight:700;overflow-wrap:anywhere}.stat .k{font-size:12px;color:var(--muted)}
+.card-list{display:grid;gap:9px}
+button{background:#203852;color:var(--text);border:1px solid #42657d;border-radius:8px;padding:11px 15px;cursor:pointer}
+button.primary{background:#166c72;border-color:#45c8c3}
+.buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.danger{color:#ffbdc0}.warn{background:#35282a;border:1px solid #804c52;border-radius:10px;padding:13px;margin-top:13px}
+.big{font-size:32px;font-weight:750}.status{padding:7px 12px;border:1px solid #58707e;border-radius:22px;color:var(--muted)}
+.full{grid-column:1/-1}pre{font-size:12px;background:#0b192a;padding:12px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
+footer{padding:0 3vw 30px;color:var(--muted)}
+@media(max-width:950px){main{grid-template-columns:1fr}}@media(max-width:540px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><h1>MID-360S <span style="color:var(--teal)">Stock PX4 Safety Tuning</span></h1><p>ROS2 Humble · Perception / Wall Follower / Mission Supervisor · localhost:5002</p></div>
+<div class="status" id="connection">Connecting to ROS telemetry…</div></header>
+<main>
+<section><h2>Differential drive advisory tuning (simulation only)</h2><div class="grid" id="fields"></div>
+<div class="buttons"><button class="primary" id="save">Save YAML</button><button id="apply">Apply to Simulation</button><button id="rollback">Rollback saved YAML</button></div>
+<div class="warn">Hardware lock: pengaturan web tidak dapat melakukan arming, mengubah parameter/misi Cube, mode PX4, maupun aktuasi motor. Tidak ada PX4 stock mixing yang telah dibuktikan.</div>
+<p id="actionStatus" aria-live="polite">Semua nilai adalah konfigurasi staging.</p></section>
+<section><h2>Live safety supervisor</h2>
+<div class="grid"><div class="stat"><div class="k">Decision</div><div class="big danger" id="state">UNKNOWN</div></div>
+<div class="stat"><div class="k">Safety reason</div><div class="v" id="reason">WAITING</div></div>
+<div class="stat"><div class="k">Front distance</div><div class="v" id="front">—</div></div>
+<div class="stat"><div class="k">Dynamic STOP</div><div class="v" id="dynamic">—</div></div>
+<div class="stat"><div class="k">Side left / right</div><div class="v" id="sides">—</div></div>
+<div class="stat"><div class="k">Suggested vx / yaw</div><div class="v" id="motion">0.00 / 0.00</div></div>
+<div class="stat"><div class="k">MAVLink age / LiDAR age</div><div class="v" id="age">—</div></div>
+<div class="stat"><div class="k">Mission / RC takeover</div><div class="v" id="mission">UNVERIFIED</div></div></div>
+<h2 style="margin-top:18px">Decision trace</h2><pre id="trace">Menunggu status supervisor…</pre>
+</section>
+<section class="full"><h2>Data collection & fault injection</h2>
+<p>Record MCAP hanya topik ROS2 diagnostik, bukan perintah kendaraan. Mode simulasi terpisah wajib diaktifkan pada node pengujian agar Apply berdampak pada simulasi.</p>
+<div class="buttons"><button id="startRecord">Start MCAP</button><button id="stopRecord">Stop MCAP</button><button id="refresh">Refresh diagnostics</button></div>
+<pre id="log">Belum ada rekaman.</pre></section>
+</main><footer>Prioritas: E-STOP fisik → RC manual → fail-safe PX4 → ROS advisory. Mission preserved ≠ mission running ≠ safe vehicle motion.</footer>
+<script>
+'use strict';
+const defs=[
+['stop_distance_m','STOP distance (m)',0.2,8,0.05],['slow_distance_m','Slow distance (m)',0.4,20,0.1],
+['cruise_limit_mps','Cruise speed limit (m/s)',0.05,3,0.05],['avoid_limit_mps','Avoid speed limit (m/s)',0.05,2,0.05],
+['deceleration_mps2','Deceleration (m/s²)',0.1,4,0.05],['reaction_time_s','Reaction time (s)',0.1,2,0.05],
+['safety_margin_m','Stopping margin (m)',0,2,0.05],
+['left_clearance_m','Left clearance target (m)',0.2,4,0.05],
+['right_clearance_m','Right clearance target (m)',0.2,4,0.05],
+['wall_kp','Wall Kp',0,4,0.05],['wall_ki','Wall Ki',0,2,0.02],['wall_kd','Wall Kd',0,2,0.02],
+['yaw_limit_radps','Yaw-rate limit (rad/s)',0.05,2,0.05],
+['wheel_track_m','Differential wheel track (m, measured)',0,4,0.05],
+['max_wheel_speed_mps','Max wheel preview speed (m/s)',0.05,3,0.05],
+
+['clear_confirm_frames','Clear confirmation frames',3,30,1],
+['advisory_timeout_ms','LiDAR timeout (ms)',100,5000,50],
+['mav_timeout_ms','MAVLink timeout (ms)',300,10000,100]];
+const $=id=>document.getElementById(id);
+const f=$('fields');
+for(const [key,label,min,max,step] of defs){
+ const box=document.createElement('label');box.className='field';
+ box.textContent=label;const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step=step;input.id=key;box.append(input);f.append(box);
+}
+let box=document.createElement('label');box.className='field';box.textContent='Preferred wall side';
+const choice=document.createElement('select');choice.id='preferred_wall_side';
+for(const x of ['AUTO','LEFT','RIGHT']){const o=document.createElement('option');o.value=x;o.textContent=x;choice.append(o)}
+box.append(choice);f.append(box);
+async function request(path,options){const r=await fetch(path,{cache:'no-store',...options});const j=await r.json();if(!r.ok)throw Error(j.error||r.status);return j}
+function current(){const data={};for(const [k] of defs)data[k]=Number($(k).value);
+data.preferred_wall_side=$('preferred_wall_side').value;return data;}
+function populate(data){for(const [k] of defs)if(data[k]!==undefined)$(k).value=data[k];$('preferred_wall_side').value=data.preferred_wall_side||'AUTO';}
+function put(k,v){$(k).textContent=v;}
+async function act(route,params){try{const r=await request(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params||{})});put('actionStatus',r.message||'OK');if(r.config)populate(r.config);if(r.log)put('log',r.log)}catch(e){put('actionStatus','FAILED: '+e.message)}}
+$('save').onclick=()=>act('/api/save',current());
+$('apply').onclick=()=>act('/api/apply-simulation',current());
+$('rollback').onclick=()=>act('/api/rollback',{});
+$('startRecord').onclick=()=>act('/api/mcap/start',{});
+$('stopRecord').onclick=()=>act('/api/mcap/stop',{});
+$('refresh').onclick=()=>poll();
+async function poll(){try{const j=await request('/api/status');put('connection',j.online?'ROS supervisor online':'ROS supervisor unavailable — fail-closed');
+const s=j.supervisor||{};
+put('state',s.state||'UNKNOWN');put('reason',s.reason||'NO_FRESH_DATA');
+const fmt=(v,u='m')=>Number.isFinite(v)?Number(v).toFixed(2)+' '+u:'—';
+put('front',fmt(s.front_m));put('dynamic',fmt(s.dynamic_stop_m));
+put('sides',fmt(s.left_m)+' / '+fmt(s.right_m));
+put('motion',fmt(s.vx_limit_mps,'m/s')+' / '+fmt(s.yaw_correction_radps,'rad/s'));
+put('age',String(s.mav_age_ms??'—')+' / '+String(s.lidar_age_ms??'—')+' ms');
+const mode=(Number.isInteger(s.px4_main_mode)&&s.px4_main_mode>=0)
+  ? String(s.px4_main_mode)+'/'+String(s.px4_sub_mode??'?'):'UNKNOWN';
+put('mission',(s.rc_takeover_verified?'RC verified':'RC not verified')+
+  ' | receiver data: '+(s.rc_telemetry_fresh?'fresh':'unknown/stale')+
+  ' | PX4 mode: '+mode+
+  (s.px4_manual_mode_selected?' | MANUAL selected':''));
+put('trace',JSON.stringify(s,null,2));
+}catch(e){put('connection','OFFLINE');put('state','UNKNOWN');put('reason','STATUS_TIMEOUT');}}
+request('/api/config').then(r=>populate(r.config)).catch(e=>put('actionStatus',e.message));
+poll();setInterval(poll,1000);
+</script></body></html>

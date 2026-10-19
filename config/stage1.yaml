@@ -1,0 +1,22 @@
+livox_mid360_diagnostics:
+  ros__parameters:
+    point_topic: /livox/lidar
+    imu_topic: /livox/imu
+    expected_cloud_hz: 10.0
+    expected_imu_hz: 200.0
+    report_period: 1.0
+    startup_grace: 3.0
+    stale_timeout: 1.0
+    warn_rate_ratio: 0.80
+    error_rate_ratio: 0.50
+    gap_factor: 3.0
+
+livox_imu_stationary_stats:
+  ros__parameters:
+    imu_topic: /livox/imu
+    duration_seconds: 10.0
+    min_samples: 1000
+    wait_timeout_seconds: 30.0
+    gyro_norm_mean_limit: 0.05
+    gyro_norm_std_limit: 0.02
+    accel_norm_std_limit: 0.03

@@ -1,0 +1,183 @@
+{
+  "configById": {
+    "3D!mid360main": {
+      "cameraState": {
+        "distance": 16,
+        "perspective": true,
+        "phi": 55,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.1,
+        "far": 500
+      },
+      "followMode": "follow-none",
+      "scene": {
+        "transforms": {
+          "showLabel": true,
+          "axisScale": 1
+        }
+      },
+      "transforms": {},
+      "topics": {
+        "/p4/optimized_map": {
+          "visible": true
+        },
+        "/mid360/map_preview": {
+          "visible": false
+        },
+        "/lio/cloud_registered": {
+          "visible": false
+        },
+        "/livox/lidar": {
+          "visible": false
+        },
+        "/p4/optimized_path": {
+          "visible": true
+        },
+        "/lio/path": {
+          "visible": false
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "drawBehind": true,
+          "instanceId": "mid360-map-grid",
+          "layerId": "foxglove.Grid",
+          "size": 40,
+          "divisions": 40,
+          "lineWidth": 1,
+          "color": "#304355",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "synchronize": false,
+      "imageMode": {}
+    },
+    "Plot!mid360acc": {
+      "title": "Livox acceleration · g",
+      "paths": [
+        {
+          "value": "/livox/imu.linear_acceleration.x",
+          "enabled": true,
+          "label": "linear_acceleration x",
+          "timestampMethod": "receiveTime",
+          "color": "#ef8686"
+        },
+        {
+          "value": "/livox/imu.linear_acceleration.y",
+          "enabled": true,
+          "label": "linear_acceleration y",
+          "timestampMethod": "receiveTime",
+          "color": "#53d8b3"
+        },
+        {
+          "value": "/livox/imu.linear_acceleration.z",
+          "enabled": true,
+          "label": "linear_acceleration z",
+          "timestampMethod": "receiveTime",
+          "color": "#7aafff"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!mid360gyro": {
+      "title": "Livox angular velocity · rad/s",
+      "paths": [
+        {
+          "value": "/livox/imu.angular_velocity.x",
+          "enabled": true,
+          "label": "angular_velocity x",
+          "timestampMethod": "receiveTime",
+          "color": "#ef8686"
+        },
+        {
+          "value": "/livox/imu.angular_velocity.y",
+          "enabled": true,
+          "label": "angular_velocity y",
+          "timestampMethod": "receiveTime",
+          "color": "#53d8b3"
+        },
+        {
+          "value": "/livox/imu.angular_velocity.z",
+          "enabled": true,
+          "label": "angular_velocity z",
+          "timestampMethod": "receiveTime",
+          "color": "#7aafff"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "RawMessages!mid360diag": {
+      "topicToRender": "/diagnostics"
+    },
+    "RawMessages!mid360odom": {
+      "topicToRender": "/p4/optimized_odometry"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": "3D!mid360main",
+    "second": {
+      "direction": "column",
+      "first": {
+        "direction": "row",
+        "first": "Plot!mid360acc",
+        "second": "Plot!mid360gyro",
+        "splitPercentage": 50
+      },
+      "second": {
+        "direction": "row",
+        "first": "RawMessages!mid360diag",
+        "second": "RawMessages!mid360odom",
+        "splitPercentage": 50
+      },
+      "splitPercentage": 52
+    },
+    "splitPercentage": 67
+  }
+}

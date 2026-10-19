@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MID-360S · 3D Mapping</title>
+<style>
+:root{color-scheme:dark;--base:#0c1220;--panel:#151f31;--line:#29374b;--fg:#eaf3ff;--muted:#93a7c2;--cyan:#38d5ce;--amber:#ffc676}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--fg);font:14px/1.5 system-ui,-apple-system,sans-serif}
+header{padding:22px clamp(16px,3vw,40px);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}.symbol{background:#173c46;border:1px solid #297d83;color:var(--cyan);font-size:25px;border-radius:12px;width:49px;height:49px;display:grid;place-items:center}
+h1{font-size:21px;letter-spacing:-.5px;margin:0}h2{font-size:15px;margin:0 0 12px}p{margin:0;color:var(--muted)}
+main{max-width:1600px;margin:auto;padding:20px clamp(16px,3vw,40px);display:grid;grid-template-columns:minmax(0,1fr) 292px;gap:18px}
+.panel,.metric{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.scene-head{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--line)}
+.scene-wrap{position:relative;background:radial-gradient(ellipse at center,#17283d,#09111d 85%);height:min(68vh,680px);min-height:330px;overflow:hidden}
+canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+.overlay{position:absolute;bottom:16px;left:16px;background:#081426d9;border:1px solid #263d57;padding:9px 12px;border-radius:9px;color:#b0c1d7;font-size:12px;pointer-events:none}
+.right{display:flex;flex-direction:column;gap:14px}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{padding:13px}.metric .value{font-size:20px;font-weight:720;letter-spacing:-.7px;margin-top:5px;white-space:nowrap}.small{font-size:12px;color:var(--muted)}
+.stats,.controls{padding:16px}.stat{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #253349}.stat:last-child{border:0}
+button{background:#213248;border:1px solid #38516c;color:var(--fg);border-radius:8px;padding:9px 13px;font:inherit;cursor:pointer}
+button:hover{background:#29405c}button.primary{background:#087b7c;border-color:#18a9a4;color:white}
+.actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.dot{background:#ae4252;width:8px;height:8px;border-radius:50%}.dot.ok{background:#40d3a0}
+.badge{color:var(--cyan);border:1px solid #305f66;background:#17393e;padding:4px 9px;border-radius:8px;font-size:11px}
+code{font:12px ui-monospace,monospace;color:#c5d8ff}
+select{background:#182a42;color:#ecf6ff;border:1px solid #3b536a;border-radius:8px;padding:9px;max-width:100%}
+button:focus-visible,select:focus-visible{outline:2px solid #38d5ce;outline-offset:2px}
+.scene-wrap .overlay{max-width:calc(100% - 32px)}
+.warning-box{border:1px solid #805d36;background:#3b2d244d;border-radius:9px;padding:10px;font-size:12px;color:#f5d6a3;margin-top:12px}
+.footer{padding:12px 2px;color:var(--muted);font-size:12px}.warning{color:var(--amber)}
+@media(max-width:950px){main{grid-template-columns:1fr}.right{display:grid;grid-template-columns:1fr 1fr;gap:12px}.right>.metrics{grid-column:1/-1}}@media(max-width:560px){.right{display:flex}.scene-wrap{height:50vh}}
+</style></head><body>
+<header><div class="brand"><div class="symbol">◈</div><div><h1>Livox MID-360S <span style="color:var(--cyan)">Mapping</span></h1><p>ROS 2 Humble · Optimized 3D point cloud · localhost:5001</p></div></div>
+<div style="display:flex;align-items:center;gap:12px"><div class="status"><span class="dot" id="systemDot"></span><span id="connectionText">Menghubungkan…</span></div><span class="badge">C++ NODES</span></div></header>
+<main>
+<section class="panel"><div class="scene-head"><div><h2>3D Point Cloud · Map Frame</h2><p class="small">Peta terkoreksi FAST-LIO + P4 pose graph, bukan point cloud mentah</p></div><div class="actions" style="margin:0">
+<label class="small" for="sourceSelect">Layer</label><select id="sourceSelect" aria-label="Layer visualisasi">
+<option value="p4">P4 Map · loop closure</option><option value="lio">FAST-LIO · registered scan</option><option value="live">LiDAR raw · sensor frame</option></select>
+<button onclick="resetView()">Fit/Reset</button><button onclick="setTop()">Top View</button>
+<button id="dragMode" onclick="toggleDragMode()">Drag: Pan</button>
+<button onclick="toggleAuto()">Auto Rotate: <span id="rotateLabel">Off</span></button></div></div>
+<div class="scene-wrap"><canvas id="canvas" aria-label="Visualisasi point cloud 3D"></canvas><div class="overlay"><b id="sourceName">Peta P4 terkoreksi</b> · Drag: geser · Shift/kanan+drag: putar · Scroll: zoom · <span id="renderInfo">Menunggu data</span></div></div></section>
+<aside class="right"><div class="metrics">
+<div class="metric"><div class="small">LiDAR</div><div class="value" id="lidarState">OFFLINE</div><div class="small" id="lidarAge">—</div></div>
+<div class="metric"><div class="small">IMU</div><div class="value" id="imuState">OFFLINE</div><div class="small" id="imuAge">—</div></div>
+<div class="metric"><div class="small">Titik 3D / P4</div><div class="value" id="mapPoints">0</div><div class="small">peta terkoreksi</div></div>
+<div class="metric"><div class="small">Keyframe P4</div><div class="value" id="keyframeCount">0</div><div class="small" id="loopCount">0 loop closures</div></div>
+<div class="metric"><div class="small">Titik frame LiDAR</div><div class="value" id="cloudPoints">0</div><div class="small">per scan</div></div></div>
+<div class="panel stats"><h2>Posisi & Integrasi</h2>
+<div class="stat"><span class="small">Pose P4 (x, y, z)</span><code id="pose">—</code></div>
+<div class="stat"><span class="small">Frame Cloud</span><code id="frame">—</code></div>
+<div class="stat"><span class="small">Map Age</span><code id="mapAge">—</code></div>
+<div class="stat"><span class="small">LIO/P4</span><code id="lio">belum tersedia</code></div>
+<div class="stat"><span class="small">Frame layer</span><code id="layerFrame">map</code></div>
+<div class="stat"><span class="small">Ekstrinsik sensor</span><code id="calibrationState" class="warning">Belum diverifikasi</code></div>
+<div class="stat"><span class="small">IMU |acc| (g)</span><code id="accelNorm">—</code></div>
+<div class="stat"><span class="small">IMU |gyro| (rad/s)</span><code id="gyroNorm">—</code></div>
+</div>
+<div class="panel controls"><h2>Simpan Peta</h2><p class="small">P4 menyimpan PCD yang sudah dioptimasi beserta trajektori CSV. Preview menyimpan PCD yang diperkecil khusus visualisasi.</p>
+<div class="actions"><button class="primary" id="saveFull">Simpan Map P4</button><button id="savePreview">Simpan Preview</button></div>
+<div class="small" id="saveState" style="margin-top:13px;overflow-wrap:anywhere">Belum ada penyimpanan</div>
+</div>
+<div class="panel controls"><h2>Kalibrasi &amp; Kualitas Peta</h2>
+<p class="small">Urutan: ① sensor diam ≥10 detik untuk statistik IMU, ② ukur transformasi LiDAR terhadap base_link, ③ verifikasi offset waktu, ④ buat lintasan bergerak dengan overlap dan kembali ke posisi awal, ⑤ audit loop closure dan simpan PCD + CSV.</p>
+<div class="warning-box" id="qualityNotice">Preview 3D bukan bukti kalibrasi atau akurasi. Pemetaan SLAM memerlukan observasi dari beberapa pose.</div>
+<div class="small" style="margin-top:10px">Foxglove resmi: <code>ws://localhost:8765</code> di RDC Sirobo, atau gunakan SSH port forwarding dari PC lain.</div>
+</div>
+<div class="footer"><span class="warning">Perhatian:</span> visualisasi dan ekspor saja, tanpa kendali motor. Periksa kalibrasi sebelum Nav2.</div>
+</aside></main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false});
+let pts=[],rotX=-0.75,rotZ=0.65,zoom=1,auto=false,drag=null,dim={w:0,h:0};
+let panX=0,panY=0,viewMode="pan",source="p4",viewCenter=[0,0,0],viewRadius=4;
+function fmt(v){return Number.isFinite(v)?v.toFixed(2)+'s':'—'}
+function resize(){const dpr=Math.min(devicePixelRatio||1,2),w=canvas.clientWidth,h=canvas.clientHeight;
+if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=w*dpr;canvas.height=h*dpr}
+dim={w,h,dpr};}
+function recenterPoints(){
+ if(!pts.length){viewCenter=[0,0,0];viewRadius=4;return}
+ let lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+ for(const p of pts)for(let i=0;i<3;i++){lo[i]=Math.min(lo[i],p[i]);hi[i]=Math.max(hi[i],p[i])}
+ viewCenter=lo.map((v,i)=>(v+hi[i])/2);
+ viewRadius=Math.max(1,(hi[0]-lo[0])/2,(hi[1]-lo[1])/2,(hi[2]-lo[2])/2)*1.3
+}
+function resetView(){rotX=-0.75;rotZ=0.65;zoom=1;panX=0;panY=0;recenterPoints()}
+function setTop(){rotX=-Math.PI/2;rotZ=0;zoom=1;panX=0;panY=0;recenterPoints()}
+function toggleDragMode(){viewMode=viewMode==="pan"?"orbit":"pan";$("dragMode").textContent=viewMode==="pan"?"Drag: Pan":"Drag: Orbit"}
+function toggleAuto(){auto=!auto;$('rotateLabel').textContent=auto?'On':'Off'}
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+canvas.addEventListener("pointerdown",e=>{
+ canvas.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,button:e.button}
+});
+canvas.addEventListener("pointermove",e=>{
+ if(!drag)return;
+ const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+ const orbit=e.shiftKey||drag.button===2||(viewMode==="orbit"&&!e.altKey);
+ if(orbit){rotZ+=dx*.008;rotX=Math.max(-1.55,Math.min(1.55,rotX+dy*.008))}
+ else{panX+=dx;panY+=dy}
+ drag.x=e.clientX;drag.y=e.clientY;
+});
+canvas.addEventListener("pointerup",()=>drag=null);
+canvas.addEventListener("pointercancel",()=>drag=null);
+window.addEventListener("keydown",e=>{
+ if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;
+ if(e.key==="1")resetView();
+ else if(e.key==="3")setTop();
+ else if(e.key.toLowerCase()==="w")panY+=30;
+ else if(e.key.toLowerCase()==="s")panY-=30;
+ else if(e.key.toLowerCase()==="a")panX+=30;
+ else if(e.key.toLowerCase()==="d")panX-=30;
+ else return;
+ e.preventDefault()
+});
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.min(12,Math.max(.15,zoom*Math.exp(-e.deltaY*.001)))},{passive:false});
+function paint(){
+requestAnimationFrame(paint);
+const view=[canvas.clientWidth,canvas.clientHeight,devicePixelRatio,rotX,rotZ,zoom,panX,panY,viewCenter,viewRadius,pts.length].toString();
+if(!dirty&&!auto&&view===lastView)return;
+lastView=view;dirty=false;
+resize();const {w,h,dpr}=dim;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#0a1423';ctx.fillRect(0,0,w,h);
+const x0=w/2+panX,y0=h/2+panY,sz=Math.min(w,h);if(auto)rotZ+=.002;
+const cp=Math.cos(rotX),sp=Math.sin(rotX),cz=Math.cos(rotZ),szr=Math.sin(rotZ);
+const radius=viewRadius||4,scale=sz*.39*zoom/radius;
+function project(x,y,z){
+ x-=viewCenter[0];y-=viewCenter[1];z-=viewCenter[2];
+ const a=x*cz-y*szr,b=x*szr+y*cz;
+ return [x0+a*scale,y0+(b*sp-z*cp)*scale, (b*cp+z*sp)];
+}
+ctx.strokeStyle='#20354c';ctx.lineWidth=.75;
+const grid=Math.max(1,Math.ceil(radius/10));for(let i=-10;i<=10;i++){const a=project(i*grid,-10*grid,0),b=project(i*grid,10*grid,0),c=project(-10*grid,i*grid,0),d=project(10*grid,i*grid,0);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.moveTo(c[0],c[1]);ctx.lineTo(d[0],d[1]);ctx.stroke()}
+const axes=[[[3,0,0],'#fa7284'],[[0,3,0],'#5ce7a0'],[[0,0,3],'#6fa7ff']];
+ctx.lineWidth=1.5;const zero=project(0,0,0);for(const [v,col] of axes){const to=project(...v);ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(zero[0],zero[1]);ctx.lineTo(to[0],to[1]);ctx.stroke()}
+ctx.globalAlpha=.82;for(const p of pts){const v=project(p[0],p[1],p[2]);if(v[0]<0||v[0]>w||v[1]<0||v[1]>h)continue;const hue=180+Math.min(50,Math.max(-25,p[2]*4));ctx.fillStyle='hsl('+hue+',80%,'+(62+Math.min(15,p[2]*2))+'%)';ctx.fillRect(v[0],v[1],Math.max(1,1.45*zoom**.3),Math.max(1,1.45*zoom**.3))}
+ctx.globalAlpha=1;}
+async function getJson(url,options){const r=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(2300),...options});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+let statusBusy=false, pointsBusy=false, lastSequence="", dirty=true, lastView="";
+async function status(){
+if(statusBusy)return; statusBusy=true;
+try{const s=await getJson('/api/status');$('systemDot').className='dot ok';$('connectionText').textContent='Dashboard ROS 2 online';
+$('lidarState').textContent=s.sensor_online?'ONLINE':'OFFLINE';$('lidarState').style.color=s.sensor_online?'#59deb4':'#fb8e95';
+$('imuState').textContent=s.imu_online?'ONLINE':'OFFLINE';$('imuState').style.color=s.imu_online?'#59deb4':'#fb8e95';
+$('lidarAge').textContent='Update '+fmt(s.cloud_age_s);$('imuAge').textContent='Update '+fmt(s.imu_age_s);
+$("keyframeCount").textContent=Number(s.keyframes||0).toLocaleString('id-ID');
+$("loopCount").textContent=Number(s.loop_closures||0)+" loop diterima / "+Number(s.loop_rejected||0)+" ditolak";
+$('mapPoints').textContent=Number(s.map_points||0).toLocaleString('id-ID');$('cloudPoints').textContent=Number(s.cloud_points_last||0).toLocaleString('id-ID');
+$('pose').textContent=(s.odom_age_s>=0?s.position.map(v=>Number(v).toFixed(2)).join(', '):'—');
+$('frame').textContent=s.cloud_frame||'—';$('mapAge').textContent=fmt(s.map_age_s);
+$('lio').textContent=s.odom_age_s>=0&&s.odom_age_s<3?'Aktif':'Menunggu';
+$('saveState').textContent=s.save_result||'Belum ada penyimpanan';
+$("calibrationState").textContent=s.extrinsics_status||"missing";
+$("calibrationState").style.color=["verified","calibrated"].includes(s.extrinsics_status)?"#59deb4":"#ffc676";
+$("accelNorm").textContent=s.imu_online?Number(s.imu_accel_norm_g||0).toFixed(4):"—";
+$("gyroNorm").textContent=s.imu_online?Number(s.imu_gyro_norm_rad_s||0).toFixed(4):"—";
+$("qualityNotice").textContent=!(s.sensor_online&&s.imu_online)?
+ "LiDAR/IMU OFFLINE: tidak ada data baru; peta yang terlihat mungkin rekaman lama.":
+ !["verified","calibrated"].includes(s.extrinsics_status)?
+ "Sensor aktif tetapi ekstrinsik UNCALIBRATED; peta 3D belum dinyatakan presisi atau siap Nav2.":
+ !s.map_available?"Belum ada peta P4 terkoreksi. Lakukan lintasan bergerak dengan overlap, lalu cek loop closure.":
+ (s.loop_closures>0 ?
+  "Loop closure sudah terdeteksi, tetapi peta ini tetap perlu evaluasi drift, overlap dan pengukuran fisik.":
+  "Peta masih PREVIEW (belum ada loop closure). Gerakkan sensor pada lintasan tertutup dan audit ICP.");
+
+}catch(e){$('systemDot').className='dot';$('connectionText').textContent='Dashboard tidak merespons';}finally{statusBusy=false;}}
+async function refreshPoints(){
+ if(pointsBusy)return; pointsBusy=true;
+ const requestedSource=source;
+ try{
+  const data=await getJson("/api/points?source="+requestedSource);
+  if(source!==requestedSource)return;
+  const sequence=requestedSource+":"+data.sequence;
+  if(sequence===lastSequence)return;
+  lastSequence=sequence; dirty=true;
+  const before=pts.length;pts=data.points||[];
+  $("layerFrame").textContent=data.frame||"map";
+  $("sourceName").textContent=source==="live"?"LiDAR mentah · sensor frame":source==="lio"?"FAST-LIO registered scan":"Peta P4 · loop closure";
+  $("renderInfo").textContent=pts.length.toLocaleString("id-ID")+" titik ditampilkan";
+  if(before===0&&pts.length)recenterPoints();
+ }catch(e){console.warn(e)}finally{pointsBusy=false;}
+}
+async function save(which){const el=which==='api/save'?$('saveFull'):$('savePreview');el.disabled=true;
+try{const a=await getJson('/'+which,{method:'POST'});$('saveState').textContent=a.message||'Permintaan dikirim';}catch(e){$('saveState').textContent='Gagal: '+e.message}finally{setTimeout(()=>el.disabled=false,1000)}}
+$("sourceSelect").addEventListener("change",e=>{
+ source=e.target.value;pts=[];lastSequence="";dirty=true;resetView();refreshPoints()
+});
+$('saveFull').onclick=()=>save('api/save');$('savePreview').onclick=()=>save('api/save_preview');
+resetView();paint();status();refreshPoints();setInterval(status,1000);setInterval(refreshPoints,100);
+</script></body></html>

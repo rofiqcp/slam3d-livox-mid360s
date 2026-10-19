@@ -1,0 +1,47 @@
+odom_base_bridge:
+  ros__parameters:
+    source_odom: /lio/odometry
+    base_odom: /odom
+    odom_frame: lio_odom
+    sensor_frame: livox_frame
+    base_frame: base_link
+    # Parent(base_link)->child(livox_frame) transform. Must be measured.
+    sensor_xyz_m: [0.0, 0.0, 0.0]
+    sensor_rpy_rad: [0.0, 0.0, 0.0]
+    publish_tf: true
+    publish_sensor_static_tf: true
+
+localization_stop_gate:
+  ros__parameters:
+    localization_status_topic: /p5/status
+    raw_command_topic: /cmd_vel
+    safe_command_topic: /cmd_vel_safe
+    base_odom_topic: /odom
+    map_frame: map
+    base_frame: base_link
+    calibration_valid: false
+    simulation_only_override: false
+    require_tf: true
+    status_timeout_s: 2.5
+    odom_timeout_s: 0.6
+    command_timeout_s: 0.35
+    tf_max_age_s: 0.5
+    max_linear_x_mps: 0.6
+    max_angular_z_radps: 0.9
+    output_frequency_hz: 20.0
+    require_operator_arm: true
+    consecutive_tracking_messages: 2
+
+pcd_occupancy_map:
+  ros__parameters:
+    map_pcd: ""
+    map_frame: map
+    resolution_m: 0.15
+    padding_m: 2.0
+    floor_z_m: 0.0
+    floor_tolerance_m: 0.20
+    obstacle_min_z_m: 0.35
+    obstacle_max_z_m: 2.0
+    min_obstacle_points_per_cell: 2
+    max_map_cells: 1500000
+    publish_period_s: 5.0
