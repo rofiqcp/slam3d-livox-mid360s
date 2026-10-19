@@ -1,24 +1,27 @@
-# Git synchronization: slam3d-livox-mid360s
+# Synchronize `slam3d-livox-mid360s` on two Linux PCs
 
-Repository: https://github.com/rofiqcp/slam3d-livox-mid360s
-
-- Sirobo: /media/sirobo/HDD/Project/slam3d-livox-mid360s
-- MiniPC1: /home/otomasi/Project/slam3d-livox-mid360s
-- Shared default branch: v1
+- GitHub: https://github.com/rofiqcp/slam3d-livox-mid360s (public)
+- Branch: `v1` (default)
+- Sirobo: `/media/sirobo/HDD/Project/slam3d-livox-mid360s`
+- MiniPC1: `/home/otomasi/Project/slam3d-livox-mid360s`
 
 Before editing:
 
-    git switch v1
-    git pull --ff-only origin v1
+```bash
+git status --short
+git switch v1
+git pull --ff-only origin v1
+```
 
-After editing and reviewing changes:
+After reviewing changes:
 
-    git status --short
-    git add <paths-to-source-and-docs>
-    git commit -m "Describe the change"
-    git push origin v1
+```bash
+python3 tools/check_repo_hygiene.py
+git status --short
+git add src/ config/ tools/ docs/ README.md AGENTS.md ROADMAP.md   # only if changed
+git diff --cached --stat
+git commit -m "Describe the reviewed change"
+git push origin v1
+```
 
-Run git pull --ff-only origin v1 on the other computer.
-Captured data, ROS builds, logs, backups, credentials and local host
-artifacts are deliberately not synchronized. Avoid simultaneous edits
-to the same files without pulling first.
+On the other machine run `git pull --ff-only origin v1`. Local maps, bag files, point-cloud samples, ROS outputs and research archives are **not** synchronized through Git. If the working tree has local modifications, preserve or commit them before pulling; never force/reset without inspecting what would be lost.

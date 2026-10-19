@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local-only config staging and simulation preview. No Pixhawk access."""
 import json
+import os
 import pathlib
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -8,10 +9,15 @@ import yaml
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 RUNTIME=pathlib.Path.home()/'.local/share/slam3d-mid360s/tuning'
 PAGE=ROOT/'foxglove/stock_px4_tuning.html'
-STAGING=ROOT/'config/stock_px4_tuning.yaml'
+# Keep user-edited profiles outside tracked repository configuration.
+STAGING=RUNTIME/'stock_px4_tuning.yaml'
+DEFAULT_STAGING=ROOT/'config/stock_px4_tuning.yaml'
 PREVIOUS=RUNTIME/'stock_px4_tuning.previous.yaml'
-SIM=ROOT/'config/stock_px4_simulation.yaml'
-STATUS=pathlib.Path('/home/sirobo/.cache/mid360_pixhawk_ros/stock_px4_latest.json')
+SIM=RUNTIME/'stock_px4_simulation.yaml'
+STATUS=pathlib.Path(os.environ.get(
+ 'PX4_STATUS_JSON',
+ str(pathlib.Path.home()/'.cache/mid360_pixhawk_ros/stock_px4_latest.json'),
+))
 DEFAULT={'stop_distance_m':1.15,'slow_distance_m':3.0,'cruise_limit_mps':.75,
 'avoid_limit_mps':.25,'deceleration_mps2':.8,'reaction_time_s':.45,
 'safety_margin_m':.3,'left_clearance_m':1.2,'right_clearance_m':1.2,
@@ -51,6 +57,8 @@ def check(v):
  return v
 
 def read(path):
+ if path == STAGING and not path.exists():
+  path = DEFAULT_STAGING
  try:return check(yaml.safe_load(path.read_text()))
  except Exception:return DEFAULT.copy()
 def write(path,v):

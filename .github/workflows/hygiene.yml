@@ -1,0 +1,14 @@
+name: Repository hygiene
+on:
+  push:
+    branches: [v1]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject experimental or generated files
+        run: python3 tools/check_repo_hygiene.py
+      - name: Check workspace build and environment shell syntax
+        run: bash -n build.sh env.sh
